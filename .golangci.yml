@@ -1,0 +1,30 @@
+run:
+  deadline: 5m
+  skip-dirs:
+    - vendor/
+    - .*fakes/
+    - .*generated/
+  skip-files:
+    - .*generated.go
+
+linters:
+  disable-all: true
+  enable:
+    - megacheck
+    - govet
+    - errcheck
+    - goconst
+    - gocyclo
+    - goimports
+    - revive
+    - gosec
+    - ineffassign
+    - nakedret
+    - staticcheck
+    - unconvert
+    - vet
+    - vetshadow
+    - misspell
+    - staticcheck
+    - unused
+    - gosimple

@@ -1,0 +1,874 @@
+swagger: "2.0"
+info:
+    title: Policy Service
+    description: The policy service exposes HTTP API for executing policies.
+    version: 0.0.1
+host: localhost:8081
+consumes:
+    - application/json
+    - application/xml
+    - application/gob
+produces:
+    - application/json
+    - application/xml
+    - application/gob
+paths:
+    /liveness:
+        get:
+            tags:
+                - health
+            summary: Liveness health
+            operationId: health#Liveness
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/HealthResponse'
+                        required:
+                            - service
+                            - status
+                            - version
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/evaluation:
+        get:
+            tags:
+                - policy
+            summary: Evaluate policy
+            description: Evaluate executes a policy with the given 'data' as input.
+            operationId: policy#Evaluate#1
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+                - name: x-evaluation-id
+                  in: header
+                  description: EvaluationID allows overwriting the randomly generated evaluationID
+                  required: false
+                  type: string
+                - name: x-cache-ttl
+                  in: header
+                  description: Policy result cache TTL in seconds
+                  required: false
+                  type: integer
+                - name: any
+                  in: body
+                  description: Input data passed to the policy execution runtime.
+                  required: true
+                  schema: {}
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+                    headers:
+                        ETag:
+                            description: ETag contains unique identifier of the policy evaluation and can be used to later retrieve the results from Cache.
+                            type: string
+            schemes:
+                - http
+        post:
+            tags:
+                - policy
+            summary: Evaluate policy
+            description: Evaluate executes a policy with the given 'data' as input.
+            operationId: policy#Evaluate#2
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+                - name: x-evaluation-id
+                  in: header
+                  description: EvaluationID allows overwriting the randomly generated evaluationID
+                  required: false
+                  type: string
+                - name: x-cache-ttl
+                  in: header
+                  description: Policy result cache TTL in seconds
+                  required: false
+                  type: integer
+                - name: any
+                  in: body
+                  description: Input data passed to the policy execution runtime.
+                  required: true
+                  schema: {}
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+                    headers:
+                        ETag:
+                            description: ETag contains unique identifier of the policy evaluation and can be used to later retrieve the results from Cache.
+                            type: string
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/evaluation/did.json:
+        get:
+            tags:
+                - policy
+            summary: Evaluate policy
+            description: Evaluate executes a policy with the given 'data' as input.
+            operationId: policy#Evaluate
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+                - name: x-evaluation-id
+                  in: header
+                  description: EvaluationID allows overwriting the randomly generated evaluationID
+                  required: false
+                  type: string
+                - name: x-cache-ttl
+                  in: header
+                  description: Policy result cache TTL in seconds
+                  required: false
+                  type: integer
+                - name: any
+                  in: body
+                  description: Input data passed to the policy execution runtime.
+                  required: true
+                  schema: {}
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+                    headers:
+                        ETag:
+                            description: ETag contains unique identifier of the policy evaluation and can be used to later retrieve the results from Cache.
+                            type: string
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/export:
+        get:
+            tags:
+                - policy
+            summary: ExportBundle policy
+            description: Export a signed policy bundle.
+            operationId: policy#ExportBundle
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: OK response.
+                    headers:
+                        content-disposition:
+                            description: Content-Disposition response header containing the name of the file.
+                            type: string
+                        content-length:
+                            description: Content-Length response header.
+                            type: int
+                        content-type:
+                            description: Content-Type response header.
+                            type: string
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/key:
+        get:
+            tags:
+                - policy
+            summary: PolicyPublicKey policy
+            description: PolicyPublicKey returns the public key in JWK format which must be used to verify a signed policy bundle.
+            operationId: policy#PolicyPublicKey
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/lock:
+        post:
+            tags:
+                - policy
+            summary: Lock policy
+            description: Lock a policy so that it cannot be evaluated.
+            operationId: policy#Lock
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: OK response.
+            schemes:
+                - http
+        delete:
+            tags:
+                - policy
+            summary: Unlock policy
+            description: Unlock a policy so it can be evaluated again.
+            operationId: policy#Unlock
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+            responses:
+                "200":
+                    description: OK response.
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/notifychange:
+        post:
+            tags:
+                - policy
+            summary: SubscribeForPolicyChange policy
+            description: Subscribe for policy change notifications by registering webhook callbacks which the policy service will call.
+            operationId: policy#SubscribeForPolicyChange
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+                - name: SubscribeForPolicyChangeRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/SubscribeRequest'
+                    required:
+                        - webhook_url
+                        - subscriber
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/validation:
+        get:
+            tags:
+                - policy
+            summary: Validate policy
+            description: Validate executes a policy with the given 'data' as input and validates the output schema.
+            operationId: policy#Validate#1
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+                - name: x-evaluation-id
+                  in: header
+                  description: EvaluationID allows overwriting the randomly generated evaluationID
+                  required: false
+                  type: string
+                - name: x-cache-ttl
+                  in: header
+                  description: Policy result cache TTL in seconds
+                  required: false
+                  type: integer
+                - name: any
+                  in: body
+                  description: Input data passed to the policy execution runtime.
+                  required: true
+                  schema: {}
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+                    headers:
+                        ETag:
+                            description: ETag contains unique identifier of the policy evaluation and can be used to later retrieve the results from Cache.
+                            type: string
+            schemes:
+                - http
+        post:
+            tags:
+                - policy
+            summary: Validate policy
+            description: Validate executes a policy with the given 'data' as input and validates the output schema.
+            operationId: policy#Validate#2
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+                - name: x-evaluation-id
+                  in: header
+                  description: EvaluationID allows overwriting the randomly generated evaluationID
+                  required: false
+                  type: string
+                - name: x-cache-ttl
+                  in: header
+                  description: Policy result cache TTL in seconds
+                  required: false
+                  type: integer
+                - name: any
+                  in: body
+                  description: Input data passed to the policy execution runtime.
+                  required: true
+                  schema: {}
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+                    headers:
+                        ETag:
+                            description: ETag contains unique identifier of the policy evaluation and can be used to later retrieve the results from Cache.
+                            type: string
+            schemes:
+                - http
+    /policy/{repository}/{group}/{policyName}/{version}/validation/did.json:
+        get:
+            tags:
+                - policy
+            summary: Validate policy
+            description: Validate executes a policy with the given 'data' as input and validates the output schema.
+            operationId: policy#Validate
+            parameters:
+                - name: repository
+                  in: path
+                  description: Policy repository.
+                  required: true
+                  type: string
+                - name: group
+                  in: path
+                  description: Policy group.
+                  required: true
+                  type: string
+                - name: policyName
+                  in: path
+                  description: Policy name.
+                  required: true
+                  type: string
+                - name: version
+                  in: path
+                  description: Policy version.
+                  required: true
+                  type: string
+                - name: x-evaluation-id
+                  in: header
+                  description: EvaluationID allows overwriting the randomly generated evaluationID
+                  required: false
+                  type: string
+                - name: x-cache-ttl
+                  in: header
+                  description: Policy result cache TTL in seconds
+                  required: false
+                  type: integer
+                - name: any
+                  in: body
+                  description: Input data passed to the policy execution runtime.
+                  required: true
+                  schema: {}
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+                    headers:
+                        ETag:
+                            description: ETag contains unique identifier of the policy evaluation and can be used to later retrieve the results from Cache.
+                            type: string
+            schemes:
+                - http
+    /readiness:
+        get:
+            tags:
+                - health
+            summary: Readiness health
+            operationId: health#Readiness
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/HealthResponse'
+                        required:
+                            - service
+                            - status
+                            - version
+            schemes:
+                - http
+    /v1/policies:
+        get:
+            tags:
+                - policy
+            summary: ListPolicies policy
+            description: List policies from storage with optional filters.
+            operationId: policy#ListPolicies
+            parameters:
+                - name: locked
+                  in: query
+                  description: Filter to return locked/unlocked policies (optional).
+                  required: false
+                  type: boolean
+                - name: policyName
+                  in: query
+                  description: Filter to return policies (optional).
+                  required: false
+                  type: string
+                - name: rego
+                  in: query
+                  description: Include policy source code in results (optional).
+                  required: false
+                  type: boolean
+                - name: data
+                  in: query
+                  description: 'Include policy static data in results (optional). '
+                  required: false
+                  type: boolean
+                - name: dataConfig
+                  in: query
+                  description: Include static data config (optional).
+                  required: false
+                  type: boolean
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        $ref: '#/definitions/PoliciesResult'
+                        required:
+                            - policies
+            schemes:
+                - http
+    /v1/policy/import:
+        post:
+            tags:
+                - policy
+            summary: ImportBundle policy
+            description: Import a signed policy bundle.
+            operationId: policy#ImportBundle
+            parameters:
+                - name: Content-Length
+                  in: header
+                  required: false
+                  type: integer
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+                "403":
+                    description: Forbidden response.
+                    schema: {}
+                "500":
+                    description: Internal Server Error response.
+                    schema: {}
+            schemes:
+                - http
+    /v1/policy/import/config:
+        get:
+            tags:
+                - policy
+            summary: PolicyAutoImport policy
+            description: PolicyAutoImport returns all automatic import configurations.
+            operationId: policy#PolicyAutoImport
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+            schemes:
+                - http
+        post:
+            tags:
+                - policy
+            summary: SetPolicyAutoImport policy
+            description: SetPolicyAutoImport enables automatic import of policy bundle on a given time interval.
+            operationId: policy#SetPolicyAutoImport
+            parameters:
+                - name: SetPolicyAutoImportRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/SetPolicyAutoImportRequest'
+                    required:
+                        - policyURL
+                        - interval
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+            schemes:
+                - http
+        delete:
+            tags:
+                - policy
+            summary: DeletePolicyAutoImport policy
+            description: DeletePolicyAutoImport removes a single automatic import configuration.
+            operationId: policy#DeletePolicyAutoImport
+            parameters:
+                - name: DeletePolicyAutoImportRequestBody
+                  in: body
+                  required: true
+                  schema:
+                    $ref: '#/definitions/DeletePolicyAutoImportRequest'
+                    required:
+                        - policyURL
+            responses:
+                "200":
+                    description: OK response.
+                    schema: {}
+            schemes:
+                - http
+definitions:
+    DeletePolicyAutoImportRequest:
+        title: DeletePolicyAutoImportRequest
+        type: object
+        properties:
+            policyURL:
+                type: string
+                description: PolicyURL defines the address from where a policy bundle will be taken.
+                example: http://pacocha.com/jesus
+                format: uri
+        example:
+            policyURL: http://connellyweissnat.info/rick_kuvalis
+        required:
+            - policyURL
+    HealthResponse:
+        title: HealthResponse
+        type: object
+        properties:
+            service:
+                type: string
+                description: Service name.
+                example: Perspiciatis sit repellat aut reiciendis fugiat rerum.
+            status:
+                type: string
+                description: Status message.
+                example: Culpa eaque debitis quos ex.
+            version:
+                type: string
+                description: Service runtime version.
+                example: Dolor voluptatem reiciendis assumenda ut numquam nisi.
+        example:
+            service: Aut aperiam.
+            status: Enim qui omnis nihil dolorem.
+            version: Non consequatur ad dolores cum.
+        required:
+            - service
+            - status
+            - version
+    PoliciesResult:
+        title: PoliciesResult
+        type: object
+        properties:
+            policies:
+                type: array
+                items:
+                    $ref: '#/definitions/Policy'
+                description: JSON array of policies.
+                example:
+                    - data: Ipsum explicabo assumenda delectus.
+                      dataConfig: Eius sed.
+                      group: Fugiat harum quia.
+                      lastUpdate: 4992260150389358954
+                      locked: true
+                      policyName: Minima et exercitationem perspiciatis quidem accusamus maxime.
+                      rego: Animi omnis minima fuga numquam.
+                      repository: Aperiam harum et sit qui fugit enim.
+                      version: Ullam natus.
+                    - data: Ipsum explicabo assumenda delectus.
+                      dataConfig: Eius sed.
+                      group: Fugiat harum quia.
+                      lastUpdate: 4992260150389358954
+                      locked: true
+                      policyName: Minima et exercitationem perspiciatis quidem accusamus maxime.
+                      rego: Animi omnis minima fuga numquam.
+                      repository: Aperiam harum et sit qui fugit enim.
+                      version: Ullam natus.
+                    - data: Ipsum explicabo assumenda delectus.
+                      dataConfig: Eius sed.
+                      group: Fugiat harum quia.
+                      lastUpdate: 4992260150389358954
+                      locked: true
+                      policyName: Minima et exercitationem perspiciatis quidem accusamus maxime.
+                      rego: Animi omnis minima fuga numquam.
+                      repository: Aperiam harum et sit qui fugit enim.
+                      version: Ullam natus.
+                    - data: Ipsum explicabo assumenda delectus.
+                      dataConfig: Eius sed.
+                      group: Fugiat harum quia.
+                      lastUpdate: 4992260150389358954
+                      locked: true
+                      policyName: Minima et exercitationem perspiciatis quidem accusamus maxime.
+                      rego: Animi omnis minima fuga numquam.
+                      repository: Aperiam harum et sit qui fugit enim.
+                      version: Ullam natus.
+        example:
+            policies:
+                - data: Ipsum explicabo assumenda delectus.
+                  dataConfig: Eius sed.
+                  group: Fugiat harum quia.
+                  lastUpdate: 4992260150389358954
+                  locked: true
+                  policyName: Minima et exercitationem perspiciatis quidem accusamus maxime.
+                  rego: Animi omnis minima fuga numquam.
+                  repository: Aperiam harum et sit qui fugit enim.
+                  version: Ullam natus.
+                - data: Ipsum explicabo assumenda delectus.
+                  dataConfig: Eius sed.
+                  group: Fugiat harum quia.
+                  lastUpdate: 4992260150389358954
+                  locked: true
+                  policyName: Minima et exercitationem perspiciatis quidem accusamus maxime.
+                  rego: Animi omnis minima fuga numquam.
+                  repository: Aperiam harum et sit qui fugit enim.
+                  version: Ullam natus.
+        required:
+            - policies
+    Policy:
+        title: Policy
+        type: object
+        properties:
+            data:
+                type: string
+                description: Policy static data.
+                example: Voluptatem autem exercitationem nobis voluptas.
+            dataConfig:
+                type: string
+                description: Policy static data optional configuration.
+                example: Nemo sed nemo voluptatem est.
+            group:
+                type: string
+                description: Policy group.
+                example: Dolorem asperiores quia.
+            lastUpdate:
+                type: integer
+                description: Last update (Unix timestamp).
+                example: 769588746051618865
+                format: int64
+            locked:
+                type: boolean
+                description: Locked specifies if the policy is locked or allowed to execute.
+                example: true
+            policyName:
+                type: string
+                description: Policy name.
+                example: Eum rem.
+            rego:
+                type: string
+                description: Policy rego source code.
+                example: Quis eaque voluptatem explicabo.
+            repository:
+                type: string
+                description: Policy repository.
+                example: Dignissimos molestiae ullam totam nihil.
+            version:
+                type: string
+                description: Policy version.
+                example: Atque labore nobis modi.
+        example:
+            data: Sunt ea.
+            dataConfig: Culpa consequatur dolorum incidunt.
+            group: Provident odio vero eaque expedita ipsa iste.
+            lastUpdate: 8740493466045056473
+            locked: false
+            policyName: Eaque et ea nesciunt rerum laudantium rerum.
+            rego: Sint ratione alias sunt eaque quam.
+            repository: Odio quae animi iusto alias.
+            version: Sint ipsum saepe ut sapiente et.
+        required:
+            - repository
+            - group
+            - policyName
+            - version
+            - locked
+            - lastUpdate
+    SetPolicyAutoImportRequest:
+        title: SetPolicyAutoImportRequest
+        type: object
+        properties:
+            interval:
+                type: string
+                description: Interval defines the period for automatic bundle import.
+                example: 1h30m
+                minLength: 2
+            policyURL:
+                type: string
+                description: PolicyURL defines the address from where a policy bundle will be taken.
+                example: http://marquardthauck.org/brooke.mclaughlin
+                format: uri
+        example:
+            interval: 1h30m
+            policyURL: http://rippin.net/jacky
+        required:
+            - policyURL
+            - interval
+    SubscribeRequest:
+        title: SubscribeRequest
+        type: object
+        properties:
+            subscriber:
+                type: string
+                description: Name of the subscriber for policy.
+                example: 3xu
+                minLength: 3
+                maxLength: 100
+            webhook_url:
+                type: string
+                description: Subscriber webhook url.
+                example: http://schultz.name/marlon
+                format: uri
+        example:
+            subscriber: qk7
+            webhook_url: http://mccluremurazik.org/zachery
+        required:
+            - webhook_url
+            - subscriber
