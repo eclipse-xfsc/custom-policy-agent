@@ -1,4 +1,4 @@
-FROM golang:1.21.6-alpine3.19 as builder
+FROM golang:1.24.2-alpine3.20 as builder
 
 RUN apk add git
 
