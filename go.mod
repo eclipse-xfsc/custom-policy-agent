@@ -15,7 +15,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/stretchr/testify v1.10.0
-	go.mongodb.org/mongo-driver v1.13.0
+	go.mongodb.org/mongo-driver v1.17.3
 	go.uber.org/zap v1.27.0
 	goa.design/goa/v3 v3.20.1
 	golang.ngrok.com/ngrok v1.5.1
@@ -74,7 +74,7 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
-	github.com/klauspost/compress v1.16.0 // indirect
+	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.3 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc v1.0.6 // indirect
@@ -82,7 +82,7 @@ require (
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/phuslu/iploc v1.0.20230201 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
@@ -103,7 +103,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yashtewari/glob-intersection v0.2.0 // indirect
-	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	go.opentelemetry.io/otel v1.19.0 // indirect
 	go.opentelemetry.io/otel/metric v1.19.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.19.0 // indirect
