@@ -227,7 +227,7 @@ github.com/gorilla/mux
 # github.com/gorilla/websocket v1.5.3
 ## explicit; go 1.12
 github.com/gorilla/websocket
-# github.com/inconshreveable/log15 v3.0.0-testing.3+incompatible
+# github.com/inconshreveable/log15 v3.0.0-testing.5+incompatible
 ## explicit
 github.com/inconshreveable/log15
 # github.com/inconshreveable/log15/v3 v3.0.0-testing.5
@@ -612,12 +612,12 @@ goa.design/goa/v3/eval
 goa.design/goa/v3/expr
 goa.design/goa/v3/http
 goa.design/goa/v3/pkg
-# golang.ngrok.com/muxado/v2 v2.0.0
+# golang.ngrok.com/muxado/v2 v2.0.1
 ## explicit; go 1.20
 golang.ngrok.com/muxado/v2
 golang.ngrok.com/muxado/v2/frame
-# golang.ngrok.com/ngrok v1.5.1
-## explicit; go 1.20
+# golang.ngrok.com/ngrok v1.13.0
+## explicit; go 1.21
 golang.ngrok.com/ngrok
 golang.ngrok.com/ngrok/config
 golang.ngrok.com/ngrok/internal/pb
@@ -625,6 +625,7 @@ golang.ngrok.com/ngrok/internal/tunnel/client
 golang.ngrok.com/ngrok/internal/tunnel/netx
 golang.ngrok.com/ngrok/internal/tunnel/proto
 golang.ngrok.com/ngrok/log
+golang.ngrok.com/ngrok/policy
 # golang.org/x/crypto v0.37.0
 ## explicit; go 1.23.0
 golang.org/x/crypto/argon2

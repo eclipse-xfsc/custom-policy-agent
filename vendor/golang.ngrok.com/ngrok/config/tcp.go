@@ -2,6 +2,7 @@ package config
 
 import (
 	"net/http"
+	"net/url"
 
 	"golang.ngrok.com/ngrok/internal/tunnel/proto"
 )
@@ -17,18 +18,21 @@ func (of tcpOptionFunc) ApplyTCP(cfg *tcpOptions) {
 }
 
 // TCPEndpoint constructs a new set options for a TCP endpoint.
+//
+// https://ngrok.com/docs/tcp/
 func TCPEndpoint(opts ...TCPEndpointOption) Tunnel {
 	cfg := tcpOptions{}
 	for _, opt := range opts {
 		opt.ApplyTCP(&cfg)
 	}
-	return cfg
+	return &cfg
 }
 
 // The options for a TCP edge.
 type tcpOptions struct {
 	// Common tunnel configuration options.
 	commonOpts
+
 	// The TCP address to request for this edge.
 	RemoteAddr string
 	// An HTTP Server to run traffic on
@@ -45,9 +49,11 @@ func WithRemoteAddr(addr string) TCPEndpointOption {
 
 func (cfg *tcpOptions) toProtoConfig() *proto.TCPEndpoint {
 	return &proto.TCPEndpoint{
+		URL:           cfg.URL,
 		Addr:          cfg.RemoteAddr,
 		IPRestriction: cfg.commonOpts.CIDRRestrictions.toProtoConfig(),
 		ProxyProto:    proto.ProxyProto(cfg.commonOpts.ProxyProto),
+		TrafficPolicy: cfg.commonOpts.TrafficPolicy,
 	}
 }
 
@@ -55,13 +61,21 @@ func (cfg tcpOptions) ForwardsTo() string {
 	return cfg.commonOpts.getForwardsTo()
 }
 
-func (cfg tcpOptions) WithForwardsTo(hostname string) {
-	cfg.commonOpts.ForwardsTo = hostname
+func (cfg tcpOptions) ForwardsProto() string {
+	return "" // Not supported for TCP
+}
+
+func (cfg *tcpOptions) WithForwardsTo(url *url.URL) {
+	cfg.commonOpts.ForwardsTo = url.Host
 }
 
 func (cfg tcpOptions) Extra() proto.BindExtra {
 	return proto.BindExtra{
-		Metadata: cfg.Metadata,
+		Name:           cfg.Name,
+		Metadata:       cfg.Metadata,
+		Description:    cfg.Description,
+		Binding:        cfg.Binding,
+		PoolingEnabled: cfg.PoolingEnabled,
 	}
 }
 

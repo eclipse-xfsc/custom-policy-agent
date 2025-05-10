@@ -18,14 +18,14 @@ require (
 	go.mongodb.org/mongo-driver v1.13.0
 	go.uber.org/zap v1.27.0
 	goa.design/goa/v3 v3.20.1
-	golang.ngrok.com/ngrok v1.5.1
+	golang.ngrok.com/ngrok v1.13.0
 	golang.org/x/oauth2 v0.11.0
 	golang.org/x/sync v0.13.0
 )
 
 require (
 	github.com/go-stack/stack v1.8.1 // indirect
-	github.com/inconshreveable/log15 v3.0.0-testing.3+incompatible // indirect
+	github.com/inconshreveable/log15 v3.0.0-testing.5+incompatible // indirect
 	github.com/inconshreveable/log15/v3 v3.0.0-testing.5 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -38,7 +38,7 @@ require (
 	github.com/nats-io/nats.go v1.13.1-0.20220308171302-2f2f6968e98d // indirect
 	github.com/nats-io/nkeys v0.4.6 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	golang.ngrok.com/muxado/v2 v2.0.0 // indirect
+	golang.ngrok.com/muxado/v2 v2.0.1 // indirect
 	golang.org/x/term v0.31.0 // indirect
 )
 

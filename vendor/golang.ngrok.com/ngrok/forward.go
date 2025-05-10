@@ -53,16 +53,20 @@ func (fwd *forwarder) Wait() error {
 // compile-time check that we're implementing the proper interface
 var _ Forwarder = (*forwarder)(nil)
 
-func join(ctx context.Context, left, right io.ReadWriter) {
+func join(logger log15.Logger, left, right net.Conn) {
 	g := &sync.WaitGroup{}
 	g.Add(2)
 	go func() {
-		_, _ = io.Copy(left, right)
-		g.Done()
+		defer g.Done()
+		defer left.Close()
+		n, err := io.Copy(left, right)
+		logger.Debug("left join finished", "err", err, "bytes", n)
 	}()
 	go func() {
-		_, _ = io.Copy(right, left)
-		g.Done()
+		defer g.Done()
+		defer right.Close()
+		n, err := io.Copy(right, left)
+		logger.Debug("right join finished", "err", err, "bytes", n)
 	}()
 	g.Wait()
 }
@@ -85,21 +89,21 @@ func forwardTunnel(ctx context.Context, tun Tunnel, url *url.URL) Forwarder {
 			if err != nil {
 				return err
 			}
+			logger.Debug("accept connection from", "address", conn.RemoteAddr())
 			fwdTasks.Add(1)
 
 			go func() {
 				ngrokConn := conn.(Conn)
-				defer ngrokConn.Close()
 
 				backend, err := openBackend(ctx, logger, tun, ngrokConn, url)
 				if err != nil {
+					defer ngrokConn.Close()
 					logger.Warn("failed to connect to backend url", "error", err)
 					fwdTasks.Done()
 					return
 				}
 
-				defer backend.Close()
-				join(ctx, ngrokConn, backend)
+				join(logger.New("url", url), ngrokConn, backend)
 				fwdTasks.Done()
 			}()
 		}
@@ -126,6 +130,10 @@ func openBackend(ctx context.Context, logger log15.Logger, tun Tunnel, tunnelCon
 		}
 		logger.Debug("set default port", "port", port)
 	}
+	var appProto string
+	if fwdProto, ok := tun.(interface{ ForwardsProto() string }); ok {
+		appProto = fwdProto.ForwardsProto()
+	}
 
 	// Create TLS config if necessary
 	var tlsConfig *tls.Config
@@ -133,6 +141,12 @@ func openBackend(ctx context.Context, logger log15.Logger, tun Tunnel, tunnelCon
 		tlsConfig = &tls.Config{
 			ServerName:    url.Hostname(),
 			Renegotiation: tls.RenegotiateOnceAsClient,
+		}
+		// If the backend is TLS and we've requested HTTP2, we'll need to
+		// make the backend aware of that via ALPN.
+		if appProto == "http2" {
+			logger.Debug("negotiating http/2 via alpn")
+			tlsConfig.NextProtos = append(tlsConfig.NextProtos, "h2", "http/1.1")
 		}
 	}
 
@@ -144,7 +158,11 @@ func openBackend(ctx context.Context, logger log15.Logger, tun Tunnel, tunnelCon
 	if err != nil {
 		defer tunnelConn.Close()
 
-		if isHTTP(tunnelConn.Proto()) {
+		// TODO: this http error is only valid for http/1.1. If the edge is
+		//       expecting http/2, it'll end up being a proxy error instead.
+		//       We should probably find a better way to do this that doesn't involve
+		//       understanding http here.
+		if isHTTP(tunnelConn.Proto()) && appProto != "http2" {
 			_ = writeHTTPError(tunnelConn, err)
 		}
 		return nil, err
