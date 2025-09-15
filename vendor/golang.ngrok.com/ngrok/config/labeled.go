@@ -2,6 +2,7 @@ package config
 
 import (
 	"net/http"
+	"net/url"
 
 	"golang.ngrok.com/ngrok/internal/tunnel/proto"
 )
@@ -17,12 +18,14 @@ func (of labeledOptionFunc) ApplyLabeled(cfg *labeledOptions) {
 }
 
 // LabeledTunnel constructs a new set options for a labeled Edge.
+//
+// https://ngrok.com/docs/network-edge/edges/#tunnel-group
 func LabeledTunnel(opts ...LabeledTunnelOption) Tunnel {
 	cfg := labeledOptions{}
 	for _, opt := range opts {
 		opt.ApplyLabeled(&cfg)
 	}
-	return cfg
+	return &cfg
 }
 
 // Options for labeled tunnels.
@@ -49,17 +52,23 @@ func WithLabel(label, value string) LabeledTunnelOption {
 	})
 }
 
+func (cfg labeledOptions) ForwardsProto() string {
+	return cfg.commonOpts.ForwardsProto
+}
+
 func (cfg labeledOptions) ForwardsTo() string {
 	return cfg.commonOpts.getForwardsTo()
 }
 
-func (cfg labeledOptions) WithForwardsTo(hostname string) {
-	cfg.commonOpts.ForwardsTo = hostname
+func (cfg *labeledOptions) WithForwardsTo(url *url.URL) {
+	cfg.commonOpts.ForwardsTo = url.Host
 }
 
 func (cfg labeledOptions) Extra() proto.BindExtra {
 	return proto.BindExtra{
-		Metadata: cfg.Metadata,
+		Name:        cfg.Name,
+		Metadata:    cfg.Metadata,
+		Description: cfg.Description,
 	}
 }
 

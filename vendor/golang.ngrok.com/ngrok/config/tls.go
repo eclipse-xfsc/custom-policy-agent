@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/x509"
 	"net/http"
+	"net/url"
 
 	"golang.ngrok.com/ngrok/internal/pb"
 	"golang.ngrok.com/ngrok/internal/tunnel/proto"
@@ -19,12 +20,14 @@ func (of tlsOptionFunc) ApplyTLS(cfg *tlsOptions) {
 }
 
 // TLSEndpoint constructs a new set options for a TLS endpoint.
+//
+// https://ngrok.com/docs/tls/
 func TLSEndpoint(opts ...TLSEndpointOption) Tunnel {
 	cfg := tlsOptions{}
 	for _, opt := range opts {
 		opt.ApplyTLS(&cfg)
 	}
-	return cfg
+	return &cfg
 }
 
 // The options for TLS edges.
@@ -58,14 +61,15 @@ type tlsOptions struct {
 
 func (cfg *tlsOptions) toProtoConfig() *proto.TLSEndpoint {
 	opts := &proto.TLSEndpoint{
+		URL:        cfg.URL,
 		Domain:     cfg.Domain,
 		ProxyProto: proto.ProxyProto(cfg.ProxyProto),
-
-		Subdomain: cfg.Subdomain,
-		Hostname:  cfg.Hostname,
+		Subdomain:  cfg.Subdomain,
+		Hostname:   cfg.Hostname,
 	}
 
 	opts.IPRestriction = cfg.commonOpts.CIDRRestrictions.toProtoConfig()
+	opts.TrafficPolicy = cfg.commonOpts.TrafficPolicy
 
 	opts.MutualTLSAtEdge = mutualTLSEndpointOption(cfg.MutualTLSCA).toProtoConfig()
 
@@ -81,17 +85,25 @@ func (cfg *tlsOptions) toProtoConfig() *proto.TLSEndpoint {
 	return opts
 }
 
+func (cfg tlsOptions) ForwardsProto() string {
+	return "" // Not supported for TLS
+}
+
 func (cfg tlsOptions) ForwardsTo() string {
 	return cfg.commonOpts.getForwardsTo()
 }
 
-func (cfg tlsOptions) WithForwardsTo(hostname string) {
-	cfg.commonOpts.ForwardsTo = hostname
+func (cfg *tlsOptions) WithForwardsTo(url *url.URL) {
+	cfg.commonOpts.ForwardsTo = url.Host
 }
 
 func (cfg tlsOptions) Extra() proto.BindExtra {
 	return proto.BindExtra{
-		Metadata: cfg.Metadata,
+		Name:           cfg.Name,
+		Metadata:       cfg.Metadata,
+		Description:    cfg.Description,
+		Binding:        cfg.Binding,
+		PoolingEnabled: cfg.PoolingEnabled,
 	}
 }
 

@@ -3,6 +3,7 @@ package config
 import (
 	"crypto/x509"
 	"net/http"
+	"net/url"
 
 	"golang.ngrok.com/ngrok/internal/pb"
 	"golang.ngrok.com/ngrok/internal/tunnel/proto"
@@ -19,12 +20,14 @@ func (of httpOptionFunc) ApplyHTTP(cfg *httpOptions) {
 }
 
 // HTTPEndpoint constructs a new set options for a HTTP endpoint.
+//
+// https://ngrok.com/docs/http/
 func HTTPEndpoint(opts ...HTTPEndpointOption) Tunnel {
 	cfg := httpOptions{}
 	for _, opt := range opts {
 		opt.ApplyHTTP(&cfg)
 	}
-	return cfg
+	return &cfg
 }
 
 type httpOptions struct {
@@ -63,6 +66,9 @@ type httpOptions struct {
 	// Headers to be added to or removed from all responses at the ngrok edge.
 	ResponseHeaders *headers
 
+	// Auto-rewrite host header on ListenAndForward?
+	RewriteHostHeader bool
+
 	// Credentials for basic authentication.
 	// If empty, basic authentication is disabled.
 	BasicAuth []basicAuth
@@ -82,6 +88,7 @@ type httpOptions struct {
 
 func (cfg *httpOptions) toProtoConfig() *proto.HTTPEndpoint {
 	opts := &proto.HTTPEndpoint{
+		URL:       cfg.URL,
 		Domain:    cfg.Domain,
 		Hostname:  cfg.Hostname,
 		Subdomain: cfg.Subdomain,
@@ -118,21 +125,33 @@ func (cfg *httpOptions) toProtoConfig() *proto.HTTPEndpoint {
 	opts.WebhookVerification = cfg.WebhookVerification.toProtoConfig()
 	opts.IPRestriction = cfg.commonOpts.CIDRRestrictions.toProtoConfig()
 	opts.UserAgentFilter = cfg.UserAgentFilter.toProtoConfig()
+	opts.TrafficPolicy = cfg.TrafficPolicy
 
 	return opts
+}
+
+func (cfg httpOptions) ForwardsProto() string {
+	return cfg.commonOpts.ForwardsProto
 }
 
 func (cfg httpOptions) ForwardsTo() string {
 	return cfg.commonOpts.getForwardsTo()
 }
 
-func (cfg httpOptions) WithForwardsTo(hostname string) {
-	cfg.commonOpts.ForwardsTo = hostname
+func (cfg *httpOptions) WithForwardsTo(url *url.URL) {
+	cfg.commonOpts.ForwardsTo = url.Host
+	if cfg.RewriteHostHeader {
+		WithRequestHeader("host", url.Host).ApplyHTTP(cfg)
+	}
 }
 
 func (cfg httpOptions) Extra() proto.BindExtra {
 	return proto.BindExtra{
-		Metadata: cfg.Metadata,
+		Name:           cfg.Name,
+		Metadata:       cfg.Metadata,
+		Description:    cfg.Description,
+		Binding:        cfg.Binding,
+		PoolingEnabled: cfg.PoolingEnabled,
 	}
 }
 

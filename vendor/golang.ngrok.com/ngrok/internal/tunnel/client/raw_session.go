@@ -19,8 +19,8 @@ import (
 
 type RawSession interface {
 	Auth(id string, extra proto.AuthExtra) (proto.AuthResp, error)
-	Listen(proto string, opts any, extra proto.BindExtra, id string, forwardsTo string) (proto.BindResp, error)
-	ListenLabel(labels map[string]string, metadata string, forwardsTo string) (proto.StartTunnelWithLabelResp, error)
+	Listen(proto string, opts any, extra proto.BindExtra, id string, forwardsTo string, forwardsProto string) (proto.BindResp, error)
+	ListenLabel(labels map[string]string, metadata string, forwardsTo string, forwardsProto string) (proto.StartTunnelWithLabelResp, error)
 	Unlisten(id string) (proto.UnbindResp, error)
 	Accept() (netx.LoggedConn, error)
 
@@ -37,6 +37,7 @@ type SessionHandler interface {
 	OnStop(*proto.Stop, HandlerRespFunc)
 	OnRestart(*proto.Restart, HandlerRespFunc)
 	OnUpdate(*proto.Update, HandlerRespFunc)
+	OnStopTunnel(*proto.StopTunnel, HandlerRespFunc)
 }
 
 // A RawSession is a client session which handles authorization with the tunnel
@@ -45,12 +46,14 @@ type SessionHandler interface {
 // When RawSession.Accept() returns an error, that means the session is dead.
 // Client sessions run over a muxado session.
 type rawSession struct {
-	mux              *muxado.Heartbeat // the muxado session we're multiplexing streams over
-	id               string            // session id for logging purposes
-	handler          SessionHandler    // callbacks to allow the application to handle requests from the server
-	latency          chan time.Duration
-	closeLatencyOnce sync.Once
+	mux        *muxado.Heartbeat // the muxado session we're multiplexing streams over
+	id         string            // session id for logging purposes
+	handler    SessionHandler    // callbacks to allow the application to handle requests from the server
+	latency    chan time.Duration
+	closed     bool
+	closedLock sync.RWMutex
 	log.Logger
+	remoteAddr net.Addr
 }
 
 // Creates a new client tunnel session with the given id
@@ -60,7 +63,7 @@ func NewRawSession(logger log.Logger, mux muxado.Session, heartbeatConfig *muxad
 }
 
 func newRawSession(mux muxado.Session, logger log.Logger, heartbeatConfig *muxado.HeartbeatConfig, handler SessionHandler) RawSession {
-	s := &rawSession{Logger: logger, handler: handler, latency: make(chan time.Duration)}
+	s := &rawSession{Logger: logger, handler: handler, latency: make(chan time.Duration), remoteAddr: mux.RemoteAddr()}
 	typed := muxado.NewTypedStreamSession(mux)
 	heart := muxado.NewHeartbeat(typed, s.onHeartbeat, heartbeatConfig)
 	s.mux = heart
@@ -75,7 +78,7 @@ func (s *rawSession) Auth(id string, extra proto.AuthExtra) (resp proto.AuthResp
 	req := proto.Auth{
 		ClientID: id,
 		Extra:    extra,
-		Version:  []string{proto.Version},
+		Version:  proto.Version,
 	}
 	if err = s.rpc(proto.AuthReq, &req, &resp); err != nil {
 		return
@@ -94,13 +97,14 @@ func (s *rawSession) Auth(id string, extra proto.AuthExtra) (resp proto.AuthResp
 // opts are protocol-specific options for listening.
 // extra is an opaque struct useful for passing application-specific data.
 // id is an session-unique identifier, if empty it will be assigned for you
-func (s *rawSession) Listen(protocol string, opts any, extra proto.BindExtra, id string, forwardsTo string) (resp proto.BindResp, err error) {
+func (s *rawSession) Listen(protocol string, opts any, extra proto.BindExtra, id string, forwardsTo string, forwardsProto string) (resp proto.BindResp, err error) {
 	req := proto.Bind{
-		ClientID:   id,
-		Proto:      protocol,
-		Opts:       opts,
-		Extra:      extra,
-		ForwardsTo: forwardsTo,
+		ClientID:      id,
+		Proto:         protocol,
+		Opts:          opts,
+		Extra:         extra,
+		ForwardsTo:    forwardsTo,
+		ForwardsProto: forwardsProto,
 	}
 	err = s.rpc(proto.BindReq, &req, &resp)
 	if err != nil {
@@ -114,11 +118,12 @@ func (s *rawSession) Listen(protocol string, opts any, extra proto.BindExtra, id
 }
 
 // ListenLabel sends a listen message to the server and returns the server's response
-func (s *rawSession) ListenLabel(labels map[string]string, metadata string, forwardsTo string) (resp proto.StartTunnelWithLabelResp, err error) {
+func (s *rawSession) ListenLabel(labels map[string]string, metadata string, forwardsTo string, forwardsProto string) (resp proto.StartTunnelWithLabelResp, err error) {
 	req := proto.StartTunnelWithLabel{
-		Labels:     labels,
-		Metadata:   metadata,
-		ForwardsTo: forwardsTo,
+		Labels:        labels,
+		Metadata:      metadata,
+		ForwardsTo:    forwardsTo,
+		ForwardsProto: forwardsProto,
 	}
 	err = s.rpc(proto.StartTunnelWithLabelReq, &req, &resp)
 	return
@@ -160,6 +165,7 @@ func (s *rawSession) Accept() (netx.LoggedConn, error) {
 		}
 
 		reqType := proto.ReqType(raw.StreamType())
+		s.Debug("tunnel Accept", "reqType", reqType, "remoteAddr", s.remoteAddr)
 		deserialize := func(v any) (ok bool) {
 			if err := json.NewDecoder(raw).Decode(v); err != nil {
 				s.Error("failed to deserialize", "type", reflect.TypeOf(v), "err", err)
@@ -201,6 +207,11 @@ func (s *rawSession) Accept() (netx.LoggedConn, error) {
 			if deserialize(&req) {
 				go s.handler.OnUpdate(&req, respFunc)
 			}
+		case proto.StopTunnelReq:
+			var req proto.StopTunnel
+			if deserialize(&req) {
+				go s.handler.OnStopTunnel(&req, respFunc)
+			}
 		default:
 			return netx.NewLoggedConn(s.Logger, raw, "type", "proxy", "sess", s.id), nil
 		}
@@ -222,10 +233,19 @@ func (s *rawSession) respFunc(raw net.Conn) func(v any) error {
 }
 
 func (s *rawSession) Close() error {
-	s.closeLatencyOnce.Do(func() {
+	// Close the muxado heartbeat session. After this, the goroutine calling the
+	// callback handler should exit.
+	err := s.mux.Close()
+
+	// Prevent sending on a closed channel in the callback handler by ensuring
+	// exclusive access to the channel and the closed boolean here.
+	s.closedLock.Lock()
+	defer s.closedLock.Unlock()
+	if !s.closed {
+		s.closed = true
 		close(s.latency)
-	})
-	return s.mux.Close()
+	}
+	return err
 }
 
 // This is essentially the RPC protocol. The request and response are just JSON
@@ -263,12 +283,23 @@ func (s *rawSession) onHeartbeat(pingTime time.Duration, timeout bool) {
 	if timeout {
 		s.Error("heartbeat timeout, terminating session")
 		s.Close()
-	} else {
-		s.Debug("heartbeat received", "latency_ms", int(pingTime.Milliseconds()))
-		select {
-		case s.latency <- pingTime:
-		default:
-		}
+		return
+	}
+
+	// make sure we don't send on a closed channel.
+	// Any number of `onHeartbeat` callbacks can be in flight at a given time,
+	// but only one Close.
+	s.closedLock.RLock()
+	defer s.closedLock.RUnlock()
+
+	if s.closed {
+		return
+	}
+
+	s.Debug("heartbeat received", "latency_ms", int(pingTime.Milliseconds()))
+	select {
+	case s.latency <- pingTime:
+	default:
 	}
 }
 
