@@ -1,0 +1,37 @@
+services:
+  policy:
+    build:
+      context: ../..
+      dockerfile: deployment/compose/Dockerfile
+    ports:
+      - "8081:8080"
+      - "2112:2112"
+    environment:
+      HTTP_HOST: "0.0.0.0"
+      HTTP_PORT: "8080"
+      METRICS_ADDR: ":2112"
+      LOG_LEVEL: "DEBUG"
+      EXTERNAL_HTTP_ADDR: "http://localhost:8081"
+      POLICY_REPOSITORY_CLONE_URL: "https://gitlab.eclipse.org/eclipse/xfsc/organisational-credential-manager-w-stack/deployment.git"
+      POLICY_REPOSITORY_BRANCH: "main"
+      POLICY_REPOSITORY_FOLDER: "Policies"
+      POLICY_LOCK_ON_VALIDATION_FAILURE: "false"
+      NATS_ADDR: "nats://nats:4222"
+      NATS_SUBJECT: "policy_notifier"
+      CACHE_ADDR: "http://cache:8080"
+      TASK_ADDR: "http://task:8080"
+      DID_RESOLVER_ADDR: "http://did-resolver:8080"
+      SIGNER_ADDR: "http://signer:8080"
+      OCM_ADDR: "https://gaiax.vereign.com/ocm"
+      AUTH_ENABLED: "false"
+      IP_FILTER_ENABLE: "false"
+      REFRESHER_POLL_INTERVAL: "10s"
+      AUTO_IMPORT_POLL_INTERVAL: "10s"
+    depends_on:
+      nats:
+        condition: service_started
+
+  nats:
+    image: nats:2.10-alpine
+    ports:
+      - "4222:4222"

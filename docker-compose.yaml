@@ -1,0 +1,54 @@
+services:
+  # policy:
+  #   build:
+  #     context: .
+  #     dockerfile: deployment/compose/Dockerfile
+  #   ports:
+  #     - "8081:8080"
+  #     - "2112:2112"
+  #   environment:
+  #     HTTP_HOST: "0.0.0.0"
+  #     HTTP_PORT: "8080"
+  #     METRICS_ADDR: ":2112"
+  #     LOG_LEVEL: "DEBUG"
+  #     EXTERNAL_HTTP_ADDR: "http://localhost:8081"
+  #     MONGO_ADDR: "mongodb://mongodb:27017/policy"
+  #     MONGO_DBNAME: "policy"
+  #     MONGO_COLLECTION: "policies"
+  #     MONGO_AUTH_MECHANISM: "SCRAM-SHA-1"
+  #     NATS_ADDR: "nats://nats:4222"
+  #     NATS_SUBJECT: "policy_notifier"
+  #     CACHE_ADDR: "http://cache:8080"
+  #     TASK_ADDR: "http://task:8080"
+  #     DID_RESOLVER_ADDR: "http://did-resolver:8080"
+  #     SIGNER_ADDR: "http://signer:8080"
+  #     OCM_ADDR: "http://ocm:8080"
+  #     AUTH_ENABLED: "false"
+  #     IP_FILTER_ENABLE: "false"
+  #     REFRESHER_POLL_INTERVAL: "10s"
+  #     AUTO_IMPORT_POLL_INTERVAL: "10s"
+  #   depends_on:
+  #     mongodb:
+  #       condition: service_healthy
+  #     nats:
+  #       condition: service_started
+
+  # mongodb:
+  #   image: mongo:7
+  #   ports:
+  #     - "27017:27017"
+  #   healthcheck:
+  #     test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 12
+  #   volumes:
+  #     - policy-mongo:/data/db
+
+  nats:
+    image: nats:2.10-alpine
+    ports:
+      - "4222:4222"
+
+volumes:
+  policy-mongo:

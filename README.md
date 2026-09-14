@@ -23,7 +23,17 @@ as a library.
 
 [OpenAPI documentation](https://github.com/eclipse-xfsc/custom-policy-agent/-/blob/main/gen/http/openapi3.json)
 
-In the local docker-compose environment, the Swagger URL is available at http://localhost:8081/swagger-ui/ 
+For local development two Docker Compose variants are available:
+
+```shell
+# MongoDB-backed storage (also the default docker-compose.yaml)
+docker compose -f deployment/compose/docker-compose.mongo.yaml up --build
+
+# Git policy-repository-backed storage (without MongoDB)
+docker compose -f deployment/compose/docker-compose.policy-repo.yaml up --build
+```
+
+In both local docker-compose environments, the Swagger URL is available at http://localhost:8081/swagger-ui/ 
 
 ### High-level Overview
 

@@ -49,12 +49,12 @@ type taskConfig struct {
 
 type signerConfig struct {
 	// Addr specifies the address of the signer service.
-	Addr string `envconfig:"SIGNER_ADDR"`
+	Addr string `envconfig:"SIGNER_SIGN_URL"`
 }
 
 type didResolverConfig struct {
 	// Addr specifies the address of the DID resolver service.
-	Addr string `envconfig:"DID_RESOLVER_ADDR"`
+	Addr string `envconfig:"DID_RESOLVER"`
 }
 
 // MongoDB configuration
@@ -122,7 +122,7 @@ type ipFilterConfig struct {
 
 type natsConfig struct {
 	// Addr specifies the address of the NATS server.
-	Addr string `envconfig:"NATS_ADDR" required:"true"`
+	Addr string `envconfig:"NATS_URL" required:"true"`
 	// Subject specifies the subject to be used for NATS subscription.
 	Subject string `envconfig:"NATS_SUBJECT" default:"policy_notifier"`
 }

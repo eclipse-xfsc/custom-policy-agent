@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: "{{ template "app.name" . }}"
+  name: "{{ template \"app.name\" . }}"
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "app.labels" . | nindent 4 }}
@@ -23,111 +23,166 @@ spec:
         {{- include "app.labels" . | nindent 8 }}
       annotations:
         {{- include "app.metricsAnnotations" . | nindent 8 }}
-{{- if .Values.podAnnotations }}
-{{ toYaml .Values.podAnnotations | indent 8 }}
-{{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       securityContext:
-{{- include "app.securitycontext" . | nindent 8 }}
+        {{- include "app.securitycontext" . | nindent 8 }}
       {{- if .Values.image.pullSecrets }}
       imagePullSecrets:
         - name: {{ .Values.image.pullSecrets }}
       {{- end }}
       containers:
-      - name: {{ template "app.name" . }}
-        image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
-        imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
-      {{- if .Values.useSecretRef }}
-        envFrom:
-          - secretRef:
-             name: {{ .Values.secretRefName }}
-      {{- else if .Values.useConfigMap }}
-        envFrom:
-          - configMapRef:
-              name: {{ .Values.configMapName }}
-      {{- else }}
-        env:
-          {{- if .Values.mongo.addr }}
-          - name: MONGO_ADDR
-            value: {{ .Values.mongo.addr | quote }}
-          {{- end }}
-          {{- if .Values.mongo.user }}
-          - name: MONGO_USER
-            value: {{ .Values.mongo.user | quote }}
-          {{- end }}
-          {{- if .Values.mongo.pass }}
-          - name: MONGO_PASS
-            value: {{ .Values.mongo.pass | quote }}
-          {{- end }}
-          {{- if .Values.mongo.dbname }}
-          - name: MONGO_DB
-            value: {{ .Values.mongo.dbname | quote }}
-          {{- end }}
-          - name: MONGO_EXPIRATION
-            value: {{ .Values.mongo.collection | quote }}
-          - name: LOG_LEVEL
-            value: {{ .Values.log.level | default "INFO" }}
-          - name: LOG_ENCODING
-            value: {{ .Values.log.encoding | default "json" }}
-          - name: HTTP_HOST
-            value: {{ .Values.policy.http.host | quote }}
-          - name: HTTP_PORT
-            value: {{ .Values.policy.http.port | quote }}
-          - name: HTTP_IDLE_TIMEOUT
-            value: {{ .Values.policy.http.timeout.idle | quote }}
-          - name: HTTP_READ_TIMEOUT
-            value: {{ .Values.policy.http.timeout.read | quote }}
-          - name: HTTP_WRITE_TIMEOUT
-            value: {{ .Values.policy.http.timeout.write | quote }}
-          - name: NATS_ADDR
-            value: {{ .Values.policy.nats.url | quote }}
-          - name: NATS_SUBJECT
-            value: {{ .Values.policy.nats.subject | quote }}
-          - name: CACHE_ADDR
-            value: {{ .Values.addresses.cache | quote }}
-          - name: TASK_ADDR
-            value: {{ .Values.addresses.task | quote }}
-          - name: DID_RESOLVER_ADDR
-            value: {{ .Values.addresses.didResolver | quote }}
-          - name: SIGNER_ADDR
-            value: {{ .Values.addresses.signer | quote }}
-          - name: OCM_ADDR
-            value: {{ .Values.addresses.ocm | quote }}
+        - name: {{ template "app.name" . }}
+          image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy | quote }}
+          {{- if .Values.useSecretRef }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secretRefName }}
+          {{- else if .Values.useConfigMap }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.configMapName }}
+          {{- else }}
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.log.level | default "INFO" | quote }}
+            - name: HTTP_HOST
+              value: {{ .Values.policy.http.host | quote }}
+            - name: HTTP_PORT
+              value: {{ .Values.policy.http.port | quote }}
+            - name: HTTP_IDLE_TIMEOUT
+              value: {{ .Values.policy.http.timeout.idle | default "120s" | quote }}
+            - name: HTTP_READ_TIMEOUT
+              value: {{ .Values.policy.http.timeout.read | default "10s" | quote }}
+            - name: HTTP_WRITE_TIMEOUT
+              value: {{ .Values.policy.http.timeout.write | default "10s" | quote }}
+            - name: EXTERNAL_HTTP_ADDR
+              value: {{ .Values.policy.externalAddr | default "http://policy:8080" | quote }}
 
-          {{- if .Values.memoryStorage}}
-          - name: {{.Values.memoryStorage.policiesRepoVar}}
-            value: {{.Values.memoryStorage.policiesRepo}}
-          - name: {{.Values.memoryStorage.policiesFolderVar}}
-            value: {{.Values.memoryStorage.policiesFolder}}
-          {{- end}}
-        {{- end }}
-{{- if .Values.extraVars }}
-{{- toYaml .Values.extraVars | indent 10 }}
-{{- end }}
-          {{- if .Values.secretEnv }}
-          {{- range $key, $value := .Values.secretEnv }}
-          - name: "{{ $key }}"
-            valueFrom:
-              secretKeyRef:
-                name: "{{ $value.name }}"
-                key: "{{ $value.key }}"
+            {{- if .Values.policy.repository.enabled }}
+            - name: POLICY_REPOSITORY_CLONE_URL
+              value: {{ required "policy.repository.cloneUrl is required when policy.repository.enabled=true" .Values.policy.repository.cloneUrl | quote }}
+            {{- with .Values.policy.repository.user }}
+            - name: POLICY_REPOSITORY_USER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.policy.repository.pass }}
+            - name: POLICY_REPOSITORY_PASS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.policy.repository.branch }}
+            - name: POLICY_REPOSITORY_BRANCH
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.policy.repository.folder }}
+            - name: POLICY_REPOSITORY_FOLDER
+              value: {{ . | quote }}
+            {{- end }}
+            - name: POLICY_LOCK_ON_VALIDATION_FAILURE
+              value: {{ .Values.policy.repository.lockOnValidationFailure | default false | quote }}
+            {{- else }}
+            - name: MONGO_ADDR
+              value: {{ required "mongo.addr is required when policy.repository.enabled=false" .Values.mongo.addr | quote }}
+            {{- with .Values.mongo.user }}
+            - name: MONGO_USER
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.mongo.pass }}
+            - name: MONGO_PASS
+              value: {{ . | quote }}
+            {{- end }}
+            - name: MONGO_DBNAME
+              value: {{ .Values.mongo.dbname | default "policy" | quote }}
+            - name: MONGO_COLLECTION
+              value: {{ .Values.mongo.collection | default "policies" | quote }}
+            - name: MONGO_AUTH_MECHANISM
+              value: {{ .Values.mongo.authMechanism | default "SCRAM-SHA-1" | quote }}
+            {{- end }}
+
+            {{- if eq (get (default dict .Values.podAnnotations) "inject.xfsc.io/enabled") "false" }}
+            - name: NATS_URL
+              value: {{ required "policy.nats.url is required when resource injection is disabled" .Values.policy.nats.url | quote }}
+            - name: CACHE_ADDR
+              value: {{ required "addresses.cache is required when resource injection is disabled" .Values.addresses.cache | quote }}
+            - name: TASK_ADDR
+              value: {{ required "addresses.task is required when resource injection is disabled" .Values.addresses.task | quote }}
+            - name: DID_RESOLVER
+              value: {{ required "addresses.didResolver is required when resource injection is disabled" .Values.addresses.didResolver | quote }}
+            - name: SIGNER_SIGN_URL
+              value: {{ required "addresses.signer is required when resource injection is disabled" .Values.addresses.signer | quote }}
+            {{- else if eq (get (default dict .Values.podAnnotations) "inject.xfsc.io/enabled") "true" }}
+            {{- /* Connection addresses are injected by the XFSC resource provisioner. */ -}}
+            {{- else }}
+            {{- fail "podAnnotations.inject.xfsc.io/enabled must be explicitly set to either 'true' or 'false'" }}
+            {{- end }}
+
+            - name: NATS_SUBJECT
+              value: {{ .Values.policy.nats.subject | default "policy_notifier" | quote }}
+            - name: OCM_ADDR
+              value: {{ required "addresses.ocm is required" .Values.addresses.ocm | quote }}
+            - name: METRICS_ADDR
+              value: {{ .Values.metrics.addr | default ":2112" | quote }}
+            - name: REFRESHER_POLL_INTERVAL
+              value: {{ .Values.refresher.pollInterval | default "10s" | quote }}
+            - name: AUTO_IMPORT_POLL_INTERVAL
+              value: {{ .Values.autoImport.pollInterval | default "10s" | quote }}
+            - name: AUTH_ENABLED
+              value: {{ .Values.auth.enabled | default false | quote }}
+            {{- if .Values.auth.enabled }}
+            - name: AUTH_JWK_URL
+              value: {{ required "auth.jwkUrl is required when auth.enabled=true" .Values.auth.jwkUrl | quote }}
+            - name: AUTH_REFRESH_INTERVAL
+              value: {{ .Values.auth.refreshInterval | default "1h" | quote }}
+            {{- with .Values.oauth.clientId }}
+            - name: OAUTH_CLIENT_ID
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.oauth.clientSecret }}
+            - name: OAUTH_CLIENT_SECRET
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.oauth.tokenUrl }}
+            - name: OAUTH_TOKEN_URL
+              value: {{ . | quote }}
+            {{- end }}
+            {{- end }}
+            - name: IP_FILTER_ENABLE
+              value: {{ .Values.ipFilter.enabled | default false | quote }}
+            {{- if .Values.ipFilter.enabled }}
+            - name: IP_FILTER_ALLOWED_IPS
+              value: {{ join "," .Values.ipFilter.allowedIPs | quote }}
+            {{- end }}
+            {{- with .Values.extraVars }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- with .Values.secretEnv }}
+            {{- range $key, $value := . }}
+            - name: {{ $key | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $value.name | quote }}
+                  key: {{ $value.key | quote }}
+            {{- end }}
+            {{- end }}
           {{- end }}
-          {{- end }}
-        ports:
-        {{- if .Values.metrics.enabled }}
-        - name: monitoring
-          containerPort: {{ .Values.metrics.port }}
-        {{- end }}
-        - name: http
-          containerPort: {{ .Values.policy.http.port }}
-        readinessProbe:
-          httpGet:
-            path: /readiness
-            port: {{ .Values.policy.http.port }}
-          initialDelaySeconds: 5
-          periodSeconds: 5
-          successThreshold: 2
-          failureThreshold: 2
-          timeoutSeconds: 5
-        resources:
-{{ toYaml .Values.resources | indent 10 }}
+          ports:
+            {{- if .Values.metrics.enabled }}
+            - name: monitoring
+              containerPort: {{ .Values.metrics.port }}
+            {{- end }}
+            - name: http
+              containerPort: {{ .Values.policy.http.port }}
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: {{ .Values.policy.http.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            successThreshold: 2
+            failureThreshold: 2
+            timeoutSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
