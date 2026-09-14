@@ -49,9 +49,47 @@ flowchart LR
 ### Configuration
 
 The Policy service is configured using the [Configuration File](./internal/config/config.go).
-All configurations are expected as Environment variables specified in the
-configuration file. For managing the configuration data from ENV variables,
-[envconfig library](https://github.com/kelseyhightower/envconfig) is used.
+All configuration values are provided through environment variables and are parsed with the
+[envconfig library](https://github.com/kelseyhightower/envconfig).
+
+The service supports two mutually exclusive policy storage modes:
+
+- **MongoDB storage**: configure `MONGO_ADDR` (and optionally the remaining `MONGO_*` variables). Do not set `POLICY_REPOSITORY_CLONE_URL`.
+- **Policy repository storage**: configure `POLICY_REPOSITORY_CLONE_URL` and the optional `POLICY_REPOSITORY_*` variables. `MONGO_ADDR` is not required in this mode.
+
+The most important environment variables are:
+
+| Area | Environment variables | Notes |
+| --- | --- | --- |
+| HTTP | `HTTP_HOST`, `HTTP_PORT`, `HTTP_IDLE_TIMEOUT`, `HTTP_READ_TIMEOUT`, `HTTP_WRITE_TIMEOUT` | HTTP server configuration |
+| MongoDB | `MONGO_ADDR`, `MONGO_USER`, `MONGO_PASS`, `MONGO_DBNAME`, `MONGO_COLLECTION`, `MONGO_AUTH_MECHANISM` | Used when no policy repository is configured |
+| Policy repository | `POLICY_REPOSITORY_CLONE_URL`, `POLICY_REPOSITORY_USER`, `POLICY_REPOSITORY_PASS`, `POLICY_REPOSITORY_BRANCH`, `POLICY_REPOSITORY_FOLDER`, `POLICY_LOCK_ON_VALIDATION_FAILURE` | Alternative to MongoDB |
+| Dependencies | `CACHE_ADDR`, `TASK_ADDR`, `SIGNER_ADDR`, `DID_RESOLVER_ADDR`, `OCM_ADDR` | Addresses of external services |
+| NATS | `NATS_ADDR`, `NATS_SUBJECT` | `NATS_ADDR` is required |
+| Metrics | `METRICS_ADDR` | Defaults to `:2112` |
+| OAuth | `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`, `OAUTH_TOKEN_URL` | OAuth client configuration |
+| Authentication | `AUTH_ENABLED`, `AUTH_JWK_URL`, `AUTH_REFRESH_INTERVAL` | Request authentication |
+| IP filter | `IP_FILTER_ENABLE`, `IP_FILTER_ALLOWED_IPS` | Optional IP filtering |
+| Refresh | `REFRESHER_POLL_INTERVAL`, `AUTO_IMPORT_POLL_INTERVAL` | Background refresh intervals |
+| General | `EXTERNAL_HTTP_ADDR`, `LOG_LEVEL` | Public service address and logging |
+
+`OCM_ADDR` and `NATS_ADDR` are required by the application configuration. Defaults and the complete configuration contract are defined in [`internal/config/config.go`](./internal/config/config.go).
+
+#### Local development
+
+Two Docker Compose variants are provided under [`deployment/compose`](./deployment/compose):
+
+```shell
+# MongoDB-backed policy storage
+docker compose -f deployment/compose/docker-compose.mongo.yaml up --build
+
+# Git policy-repository-backed storage, without MongoDB
+docker compose -f deployment/compose/docker-compose.policy-repo.yaml up --build
+```
+
+The MongoDB variant starts MongoDB and NATS. The policy-repository variant starts NATS and configures the policy service through `POLICY_REPOSITORY_*` variables without starting MongoDB. Both variants expose the Policy API on port `8081` and metrics on port `2112`.
+
+For VS Code, [`.vscode/launch.json`](./.vscode/launch.json) contains matching **Policy: MongoDB** and **Policy: Policy Repository** debug configurations. The referenced dependency addresses (cache, task, DID resolver and signer) must be reachable when a policy uses the corresponding integration.
 
 
 ### Policy Evaluation
@@ -427,7 +465,43 @@ If you want to set another log level, use the ENV configuration variable `LOG_LE
 
 ### Deployment
 
-[Helm deployment documentation](deployment/helm/README.md)
+The Helm chart is located in [`deployment/helm`](./deployment/helm). Two storage configurations are provided:
+
+```shell
+# MongoDB storage
+helm upgrade --install policy deployment/helm -f deployment/helm/values.yaml
+
+# Policy repository storage (without MongoDB configuration)
+helm upgrade --install policy deployment/helm -f deployment/helm/values-policy-repo.yaml
+```
+
+`values.yaml` is the MongoDB-backed variant. `values-policy-repo.yaml` enables the Git policy repository and leaves `mongo.addr` empty. Environment variable names in the Deployment template match the names defined in `internal/config/config.go`, including `MONGO_DBNAME`, `MONGO_COLLECTION` and `POLICY_REPOSITORY_FOLDER`.
+
+#### XFSC resource injection
+
+The chart supports XFSC resource injection through pod annotations:
+
+```yaml
+podAnnotations:
+  inject.xfsc.io/enabled: "false"
+  inject.xfsc.io/needs: "nats,task,cache,did-resolver,signer"
+```
+
+When `inject.xfsc.io/enabled` is `"false"`, the Deployment renders `NATS_ADDR`, `TASK_ADDR`, `CACHE_ADDR`, `DID_RESOLVER_ADDR` and `SIGNER_ADDR` from the Helm values. This is useful for standalone deployments and environments where dependency addresses are managed directly in the chart.
+
+When `inject.xfsc.io/enabled` is `"true"`, those address variables are intentionally omitted from the container environment. They are expected to be supplied by the XFSC resource provisioner according to `inject.xfsc.io/needs`. `NATS_SUBJECT` remains regular application configuration and `OCM_ADDR` continues to be configured explicitly through `addresses.ocm`.
+
+For example, to enable injection:
+
+```yaml
+podAnnotations:
+  inject.xfsc.io/enabled: "true"
+  inject.xfsc.io/needs: "nats,task,cache,did-resolver,signer"
+```
+
+The Deployment implements this distinction by checking the `inject.xfsc.io/enabled` annotation before rendering the dependency address variables. Keep `inject.xfsc.io/needs` synchronized with the dependencies that are expected to be provisioned.
+
+For all chart values and additional deployment options, see the [Helm deployment documentation](deployment/helm/README.md).
 
 ### License
 
