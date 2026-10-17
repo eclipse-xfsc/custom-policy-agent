@@ -6,9 +6,9 @@ name: policy
 nameOverride: ""
 
 image:
-  repository: node-654e3bca7fbeeed18f81d7c7.ps-xaas.io
+  repository: node-654e3bca7fbeeed18f81d7c7.ps-xaas.io/tsa
   # -- Image name
-  name: tsa/policy
+  name: policy
   # -- Image tag
   # Uses .Chart.AppVersion if empty
   tag: "latest"
@@ -18,7 +18,7 @@ image:
   # -- Image pull policy
   pullPolicy: IfNotPresent
   # -- Image pull secret when internal image is used
-  pullSecrets: deployment-key-light
+  pullSecrets: 
 
 ## Use configMap or secretRef for environment variables
 useConfigMap: false
@@ -26,7 +26,9 @@ configMapName: my-configmap
 useSecretRef: false
 secretRefName: my-secret
 
-podAnnotations: {}
+podAnnotations:
+    inject.xfsc.io/enabled: "false"
+    inject.xfsc.io/needs: "nats,signer,didresolver"
 ##
 ## Pass extra environment variables to the container.
 ##
@@ -118,7 +120,7 @@ addresses:
   ocm: https://gaiax.vereign.com/ocm
 
 ingress:
-  enabled: true
+  enabled: false
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/rewrite-target: /$2
@@ -128,6 +130,6 @@ ingress:
 
 istio:
   injection:
-    pod: true
+    pod: false
 
 secretEnv:
