@@ -121,8 +121,8 @@ type ipFilterConfig struct {
 }
 
 type natsConfig struct {
-	// Addr specifies the address of the NATS server.
-	Addr string `envconfig:"NATS_ADDR" required:"true"`
+	// Url specifies the address of the NATS server.
+	Url string `envconfig:"NATS_URL" required:"true"`
 	// Subject specifies the subject to be used for NATS subscription.
 	Subject string `envconfig:"NATS_SUBJECT" default:"policy_notifier"`
 }

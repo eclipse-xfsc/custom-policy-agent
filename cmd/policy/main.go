@@ -86,7 +86,7 @@ func main() {
 	cache := cache.New(cfg.Cache.Addr, cache.WithHTTPClient(oauthClient))
 
 	// create event client
-	events, err := nats.New(cfg.Nats.Addr, cfg.Nats.Subject)
+	events, err := nats.New(cfg.Nats.Url, cfg.Nats.Subject)
 	if err != nil {
 		logger.Fatal("failed to create events client", zap.Error(err))
 	}
