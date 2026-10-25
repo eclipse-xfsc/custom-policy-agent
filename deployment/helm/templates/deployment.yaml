@@ -80,6 +80,15 @@ spec:
             - name: HTTP_WRITE_TIMEOUT
               value: {{ .Values.policy.http.timeout.write | quote }}
 
+            - name: OCM_ADDR
+              value: {{ .Values.addresses.ocm | quote }}
+
+            - name: TASK_ADDR
+              value: {{ .Values.addresses.task | quote }}
+
+            - name: CACHE_ADDR
+              value: {{ .Values.addresses.cache | quote }}
+
             {{- if .Values.mongo.collection }}
             - name: MONGO_EXPIRATION
               value: {{ .Values.mongo.collection | quote }}
@@ -125,20 +134,11 @@ spec:
             - name: NATS_SUBJECT
               value: {{ .Values.policy.nats.subject | quote }}
 
-            - name: CACHE_ADDR
-              value: {{ .Values.addresses.cache | quote }}
-
-            - name: TASK_ADDR
-              value: {{ .Values.addresses.task | quote }}
-
             - name: DID_RESOLVER
               value: {{ .Values.addresses.didResolver | quote }}
 
             - name: SIGNER_URL
               value: {{ .Values.addresses.signer | quote }}
-
-            - name: OCM_ADDR
-              value: {{ .Values.addresses.ocm | quote }}
 
             {{- end }}
 
