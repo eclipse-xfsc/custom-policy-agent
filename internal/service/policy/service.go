@@ -168,7 +168,7 @@ func (s *Service) Evaluate(ctx context.Context, req *policy.EvaluateRequest) (*p
 		ttl = *req.TTL
 	}
 
-	err = s.cache.Set(ctx, evaluationID, "", "", jsonValue, ttl)
+	err = s.cache.Set(ctx, evaluationID, "cache", "", jsonValue, ttl)
 	if err != nil {
 		// if the cache service is not available, don't stop but continue with returning the result
 		if !errors.Is(errors.ServiceUnavailable, err) {
