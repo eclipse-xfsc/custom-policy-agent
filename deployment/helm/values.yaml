@@ -28,7 +28,7 @@ secretRefName: my-secret
 
 podAnnotations:
     inject.xfsc.io/enabled: "false"
-    inject.xfsc.io/needs: "nats,signer,didresolver"
+    inject.xfsc.io/needs: "nats,signer,didresolver,cache"
 ##
 ## Pass extra environment variables to the container.
 ##
